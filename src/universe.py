@@ -1,0 +1,43 @@
+"""The investable universe: every ticker the project downloads, grouped by role."""
+
+# US sector proxies: Fidelity Select sector funds (total-return NAVs back to the 1980s)
+US_SECTOR_FUNDS = [
+    "FSRBX",  # Banking
+    "FSLBX",  # Brokerage & Investment Mgmt
+    "FSPCX",  # Insurance
+    "FSCHX",  # Chemicals
+    "FSDPX",  # Materials
+    "FSENX",  # Energy
+    "FSPHX",  # Health Care
+    "FBIOX",  # Biotechnology
+    "FSPTX",  # Technology
+    "FSCSX",  # Software & IT Services
+    "FSELX",  # Semiconductors
+    "FSUTX",  # Utilities
+    "FSTCX",  # Telecommunications
+    "FSDAX",  # Defense & Aerospace
+    "FSRFX",  # Transportation
+    "FSAVX",  # Automotive
+    "FDFAX",  # Consumer Staples
+    "FSRPX",  # Retailing
+    "FDLSX",  # Leisure
+    "FSHOX",  # Construction & Housing
+    "FSAGX",  # Gold
+]
+US_AGRI_FERTILIZER = ["MOS", "CF", "NTR", "ADM", "DE"]
+US_BENCHMARKS = ["^SP500TR", "VFINX", "^IRX"]  # S&P 500 total return, index fund, 13-week T-bill yield
+
+INDIA_STOCKS = """HDFCBANK ICICIBANK SBIN KOTAKBANK AXISBANK BANKBARODA INFY TCS WIPRO HCLTECH TECHM
+SUNPHARMA DRREDDY CIPLA LUPIN AUROPHARMA DIVISLAB HINDUNILVR ITC NESTLEIND BRITANNIA DABUR MARICO
+MARUTI M&M BAJAJ-AUTO HEROMOTOCO EICHERMOT ASHOKLEY TATASTEEL HINDALCO JSWSTEEL SAIL VEDL NATIONALUM
+RELIANCE ONGC BPCL IOC GAIL HINDPETRO PIDILITIND SRF UPL TATACHEM AARTIIND DEEPAKNTR NAVINFLUOR GUJALKALI
+CHAMBLFERT COROMANDEL GSFC RCF NFL DEEPAKFERT GNFC FACT ULTRACEMCO ACC AMBUJACEM SHREECEM RAMCOCEM
+LT BHEL SIEMENS ABB CUMMINSIND THERMAX NTPC POWERGRID TATAPOWER BHARTIARTL DLF GODREJPROP OBEROIRLTY
+TITAN HAVELLS VOLTAS WHIRLPOOL BLUESTARCO BAJFINANCE SHRIRAMFIN M&MFIN LICHSGFIN CHOLAFIN""".split()
+INDIA_STOCKS = [t + ".NS" for t in INDIA_STOCKS]
+INDIA_BENCHMARKS = ["^BSESN", "^NSEI"]
+INDIA_OFFICIAL_INDICES = ["^NSEBANK", "^CNXIT", "^CNXPHARMA", "^CNXFMCG", "^CNXAUTO", "^CNXMETAL",
+                          "^CNXENERGY", "^CNXREALTY", "^CNXINFRA", "^CNXPSUBANK"]
+
+ALL_TICKERS = (US_SECTOR_FUNDS + US_AGRI_FERTILIZER + US_BENCHMARKS +
+               INDIA_STOCKS + INDIA_BENCHMARKS + INDIA_OFFICIAL_INDICES)

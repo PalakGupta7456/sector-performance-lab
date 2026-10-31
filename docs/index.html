@@ -1,0 +1,1021 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sector Performance Lab — 36 years of US &amp; Indian sector returns</title>
+<meta name="description" content="Interactive analysis of sector returns, risk, Sharpe, Treynor, Sortino, alpha, drawdowns and momentum for US (1990–2026) and Indian (1997–2026) equity sectors.">
+<meta property="og:title" content="Sector Performance Lab">
+<meta property="og:description" content="Which sectors won over 36 years, at what risk, and does past performance predict the future? Interactive dashboard + open Python code.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23123a6b'/%3E%3Cpath d='M7 23l6-7 5 4 7-10' stroke='%2386b6ef' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+:root {
+  color-scheme: light;
+  --font-anthropic-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-anthropic-serif: "Fraunces", Georgia, serif;
+  --color-bg: #f6f5f1; --color-panel: #fdfdfb; --color-fg: #141413; --color-fg-muted: #5e5d59;
+  --color-border-line: #e3e1da; --color-ok: #0a7d0a; --color-warn: #b37800; --color-bad: #c63535;
+  --cds-font-size-caption: 12.5px; --cds-font-size-body: 15px; --cds-font-size-heading: 19px; --cds-font-size-title: 30px;
+  --cds-font-weight-medium: 600;
+  --cds-gap-xs: 4px; --cds-gap-sm: 8px; --cds-gap-md: 16px; --cds-gap-lg: 28px; --cds-gap-xl: 44px;
+  --cds-pad-xs: 4px; --cds-pad-sm: 8px; --cds-pad-md: 14px; --cds-pad-lg: 20px; --cds-radius: 10px;
+  --cds-chart-muted: #c9c7bf; --cds-chart-grid: #ecebe5; --cds-chart-axis: #b9b7ae; --cds-chart-reference: #8c8a82;
+  --cds-surface-popover: #ffffff; --cds-border: #dcdad2; --cds-shadow-popover: 0 6px 24px rgba(20,20,19,.12);
+  --cds-text-secondary: #5e5d59; --cds-dur-slow: 300ms; --cds-ease-out: cubic-bezier(.2,.7,.2,1);
+  --hero-a: #0f2f57; --hero-b: #1c5cab; --hero-c: #2a78d6;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #121211; --color-panel: #1c1c1a; --color-fg: #f0efec; --color-fg-muted: #a9a89f;
+  --color-border-line: #2f2f2c; --color-ok: #4cc24c; --color-warn: #f0b429; --color-bad: #ef6b6b;
+  --cds-chart-muted: #55544f; --cds-chart-grid: #262624; --cds-chart-axis: #4a4945; --cds-chart-reference: #8a8980;
+  --cds-surface-popover: #262624; --cds-border: #3a3a36; --cds-shadow-popover: 0 6px 24px rgba(0,0,0,.5);
+  --cds-text-secondary: #a9a89f; --hero-a: #0b1e38; --hero-b: #123a6b; --hero-c: #1c5cab;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); font-family: var(--font-anthropic-sans); -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+.hero { background: radial-gradient(1200px 400px at 85% -10%, var(--hero-c), transparent 60%), linear-gradient(135deg, var(--hero-a), var(--hero-b)); color: #fff; padding: 44px 16px 92px; }
+.hero-in { max-width: 1400px; margin: 0 auto; }
+.hero .kicker { text-transform: uppercase; letter-spacing: .14em; font-size: 12px; opacity: .8; font-weight: 600; }
+.hero h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: clamp(34px, 6vw, 58px); line-height: 1.05; margin: 10px 0 14px; letter-spacing: -.01em; }
+.hero p.sub { font-size: clamp(15px, 2vw, 18px); max-width: 62ch; line-height: 1.55; opacity: .92; margin: 0 0 22px; }
+.hero .links { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.hero .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; font-weight: 600; font-size: 14px; text-decoration: none; border: 1px solid rgba(255,255,255,.35); color: #fff; background: rgba(255,255,255,.08); backdrop-filter: blur(4px); cursor: pointer; font-family: inherit; }
+.hero .btn.primary { background: #fff; color: #0f2f57; border-color: #fff; }
+.hero .btn:hover { transform: translateY(-1px); }
+.hero .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 30px; max-width: 820px; }
+.hero .stat { border-left: 2px solid rgba(255,255,255,.4); padding-left: 12px; }
+.hero .stat b { display: block; font-family: var(--font-anthropic-serif); font-weight: 400; font-size: 30px; }
+.hero .stat span { font-size: 13px; opacity: .85; }
+main { max-width: 1400px; margin: -64px auto 0; padding: 0 16px 48px; position: relative; }
+#dash-root { background: var(--color-bg); border-radius: 16px; padding: clamp(16px, 3vw, 32px); box-shadow: 0 10px 40px rgba(0,0,0,.08); border: 1px solid var(--color-border-line); }
+#dash-root .sl > header > h1 { display: none; }
+footer { max-width: 1400px; margin: 0 auto; padding: 8px 16px 40px; color: var(--color-fg-muted); font-size: 13px; line-height: 1.6; }
+.dash-skeleton { position: relative; }
+.dash-skeleton::after { content: ""; position: absolute; inset: 8px 0; border-radius: 8px; background: linear-gradient(90deg, var(--cds-chart-grid), color-mix(in oklab, var(--cds-chart-grid) 40%, var(--color-panel)), var(--cds-chart-grid)); background-size: 200% 100%; animation: sh 1.4s infinite linear; }
+@keyframes sh { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .dash-skeleton::after { animation: none; } }
+</style>
+<script>
+  // theme: honour saved choice, else OS preference
+  (function () {
+    var t = null; try { t = localStorage.getItem('slab-theme'); } catch (e) {}
+    if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
+</head>
+<body>
+<section class="hero">
+  <div class="hero-in">
+    <div class="kicker">Equity research project · Python + D3</div>
+    <h1>Sector Performance Lab</h1>
+    <p class="sub">Which industries actually rewarded investors from 1990 to 2026 — and at what risk? A from-scratch study of 37 sector portfolios across the US and India: returns, volatility, Sharpe, Sortino, Treynor, alpha, drawdowns, correlations, and an honest test of whether past winners keep winning.</p>
+    <div class="links">
+      <a class="btn primary" href="https://github.com/PalakGupta7456/sector-performance-lab" target="_blank" rel="noopener">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        View the code on GitHub</a>
+      <a class="btn" href="https://github.com/PalakGupta7456/sector-performance-lab/tree/main/src" target="_blank" rel="noopener">Python pipeline</a>
+      <a class="btn" href="https://github.com/PalakGupta7456/sector-performance-lab/tree/main/outputs" target="_blank" rel="noopener">Result tables (CSV)</a>
+      <button class="btn" id="theme-toggle" type="button" aria-label="Toggle dark mode">◐ Theme</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>36 yrs</b><span>of monthly data, 1990–2026</span></div>
+      <div class="stat"><b>37</b><span>sector portfolios, US + India</span></div>
+      <div class="stat"><b>111</b><span>stocks &amp; funds analysed</span></div>
+      <div class="stat"><b>15+</b><span>performance &amp; risk metrics</span></div>
+    </div>
+  </div>
+</section>
+<main>
+  <div id="dash-root">
+<style>
+.sl { font-family: var(--font-anthropic-sans); color: var(--color-fg); max-width: 1400px; margin-inline: auto; }
+.sl h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0 0 var(--cds-gap-xs); }
+.sl h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: var(--cds-gap-lg) 0 var(--cds-gap-sm); }
+.sl h3 { font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); margin: 0 0 2px; }
+.sl .note { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); margin: 0 0 var(--cds-gap-sm); line-height: 1.45; }
+.sl .lede { font-size: var(--cds-font-size-body); line-height: 1.55; margin: 0 0 var(--cds-gap-md); max-width: 75ch; }
+.sl .lede b, .sl .prose b { font-weight: 600; }
+.sl .prose { font-size: var(--cds-font-size-body); line-height: 1.6; max-width: 80ch; }
+.sl .prose p { margin: 0 0 var(--cds-gap-sm); }
+.sl .bar { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm) var(--cds-gap-lg); align-items: center; margin: var(--cds-gap-sm) 0 var(--cds-gap-md); }
+.sl .seg { display: inline-flex; border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); overflow: hidden; }
+.sl .seg button, .sl .tabs button, .sl .chip { font: inherit; font-size: var(--cds-font-size-caption); background: transparent; color: var(--color-fg); border: 0; padding: 6px 12px; cursor: pointer; }
+.sl .seg button + button { border-left: 1px solid var(--color-border-line); }
+.sl .seg button[aria-pressed="true"] { background: var(--color-fg); color: var(--color-bg); }
+.sl .ctl-label { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-right: var(--cds-gap-xs); }
+.sl .tabs { display: flex; flex-wrap: wrap; gap: 2px; border-bottom: 1px solid var(--color-border-line); margin-bottom: var(--cds-gap-md); }
+.sl .tabs button { border-bottom: 2px solid transparent; padding: 8px 12px; font-size: var(--cds-font-size-body); color: var(--color-fg-muted); }
+.sl .tabs button[aria-selected="true"] { color: var(--color-fg); border-bottom-color: var(--color-fg); }
+.sl .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr)); gap: var(--cds-gap-md); }
+.sl .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr)); gap: var(--cds-gap-md); margin-bottom: var(--cds-gap-md); }
+.sl .card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); min-width: 0; }
+.sl .tile .lbl { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.sl .tile .big { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; margin: 4px 0 2px; min-height: 1.2em; }
+.sl .tile .sub { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); min-height: 1.3em; }
+.sl .tile .sub b { color: var(--color-fg); font-weight: 600; }
+.sl .chart { position: relative; min-height: 320px; }
+.sl .chart.short { min-height: 240px; }
+.sl .chart.tall { min-height: 420px; }
+.sl .chart svg { display: block; overflow: visible; }
+.sl .tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); line-height: 1.5; white-space: nowrap; z-index: 5; font-variant-numeric: tabular-nums; }
+.sl .tip .t { color: var(--cds-text-secondary); margin-bottom: 2px; }
+.sl .tip .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.sl .tbox { max-height: 560px; overflow: auto; border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); }
+.sl table { border-collapse: collapse; width: 100%; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+.sl th, .sl td { padding: 6px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--color-border-line); }
+.sl th:first-child, .sl td:first-child { text-align: left; position: sticky; left: 0; background: var(--color-panel); }
+.sl td.l, .sl th.l { text-align: left; }
+.sl thead th { position: sticky; top: 0; background: var(--color-panel); z-index: 2; color: var(--color-fg-muted); font-weight: var(--cds-font-weight-medium); cursor: pointer; user-select: none; }
+.sl thead th:first-child { z-index: 3; }
+.sl thead th[aria-sort="descending"]::after { content: " ▼"; font-size: 9px; }
+.sl thead th[aria-sort="ascending"]::after { content: " ▲"; font-size: 9px; }
+.sl tr.bench td { font-weight: 600; background: color-mix(in oklab, var(--color-fg) 5%, var(--color-panel)); }
+.sl tr.port td { font-style: italic; }
+.sl .pos { color: var(--color-ok); } .sl .neg { color: var(--color-bad); }
+.sl .search { font: inherit; font-size: var(--cds-font-size-caption); padding: 6px 10px; border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-bg); color: var(--color-fg); width: min(100%, 16rem); margin-bottom: var(--cds-gap-sm); }
+.sl .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 var(--cds-gap-md); min-height: 30px; }
+.sl .chip { border: 1px solid var(--color-border-line); border-radius: 999px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 6px; }
+.sl .chip[aria-pressed="true"] { border-color: var(--color-fg); font-weight: 600; }
+.sl .chip .sw { width: 9px; height: 9px; border-radius: 50%; background: var(--cds-chart-muted); }
+.sl .scorebar { display: inline-block; height: 8px; border-radius: 2px; vertical-align: middle; }
+.sl .sig { display: inline-flex; gap: 4px; align-items: center; }
+.sl .warnbox { border-left: 3px solid var(--color-warn); padding: var(--cds-pad-sm) var(--cds-pad-md); background: color-mix(in oklab, var(--color-warn) 8%, var(--color-panel)); border-radius: var(--cds-radius); font-size: var(--cds-font-size-caption); line-height: 1.5; margin-bottom: var(--cds-gap-md); }
+.sl dl { display: grid; grid-template-columns: minmax(9rem, max-content) 1fr; gap: 6px 16px; font-size: var(--cds-font-size-caption); line-height: 1.5; margin: 0; }
+.sl dt { font-weight: 600; } .sl dd { margin: 0; color: var(--color-fg-muted); }
+.sl .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-top: var(--cds-gap-xs); min-height: 18px; }
+.sl .legend span { display: inline-flex; align-items: center; gap: 5px; }
+[data-dash-source-state=empty] { color: transparent; }
+[data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+.sl .fail { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: inherit; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+.sl .fail::before { content: ""; width: .375rem; height: .375rem; border-radius: 50%; background: var(--color-bad); }
+</style>
+
+<div class="sl">
+  <header id="top">
+    <h1>Sector Performance Lab</h1>
+    <p class="lede">For <b data-draw="hl" data-f="market_label" data-source="headlines" data-field="market_label">—</b> over <b data-draw="hl" data-f="period" data-source="headlines" data-field="period">—</b>, <b data-draw="hl" data-f="top_sharpe_sector" data-source="headlines" data-field="top_sharpe_sector">—</b> gave the best return per unit of risk (Sharpe <b data-draw="hl" data-f="top_sharpe" data-fmt="r2" data-source="headlines" data-field="top_sharpe">—</b>), <b data-draw="hl" data-f="top_cagr_sector" data-source="headlines" data-field="top_cagr_sector">—</b> grew fastest, and <b data-draw="hl" data-f="n_beat" data-fmt="int" data-source="headlines" data-field="n_beat">—</b> of <b data-draw="hl" data-f="n_sectors" data-fmt="int" data-source="headlines" data-field="n_sectors">—</b> sectors beat the <b data-draw="hl" data-f="bench" data-source="headlines" data-field="bench">—</b>.</p>
+    <div class="bar">
+      <div><span class="ctl-label">Market</span>
+        <span class="seg" role="group" aria-label="Market">
+          <button type="button" class="js-market" data-v="US" aria-pressed="true">US</button>
+          <button type="button" class="js-market" data-v="India" aria-pressed="false">India</button>
+        </span></div>
+      <div><span class="ctl-label">Period</span>
+        <span class="seg" role="group" aria-label="Period">
+          <button type="button" class="js-win" data-v="Full" aria-pressed="true">Since inception</button>
+          <button type="button" class="js-win" data-v="20Y" aria-pressed="false">20 yrs</button>
+          <button type="button" class="js-win" data-v="10Y" aria-pressed="false">10 yrs</button>
+          <button type="button" class="js-win" data-v="5Y" aria-pressed="false">5 yrs</button>
+          <button type="button" class="js-win" data-v="3Y" aria-pressed="false">3 yrs</button>
+          <button type="button" class="js-win" data-v="1Y" aria-pressed="false">1 yr</button>
+        </span></div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Views">
+      <button type="button" role="tab" class="js-tab" id="tab-leaderboard" data-t="leaderboard" aria-selected="true">Leaderboard</button>
+      <button type="button" role="tab" class="js-tab" id="tab-growth" data-t="growth" aria-selected="false">Growth &amp; drawdowns</button>
+      <button type="button" role="tab" class="js-tab" id="tab-years" data-t="years" aria-selected="false">Year by year</button>
+      <button type="button" role="tab" class="js-tab" id="tab-diversify" data-t="diversify" aria-selected="false">Diversification</button>
+      <button type="button" role="tab" class="js-tab" id="tab-outlook" data-t="outlook" aria-selected="false">What next?</button>
+      <button type="button" role="tab" class="js-tab" id="tab-nse" data-t="nse" aria-selected="false">India reality check</button>
+      <button type="button" role="tab" class="js-tab" id="tab-stocks" data-t="stocks" aria-selected="false">Inside each sector</button>
+      <button type="button" role="tab" class="js-tab" id="tab-method" data-t="method" aria-selected="false">Method &amp; caveats</button>
+    </nav>
+  </header>
+
+  <!-- ========================= LEADERBOARD ========================= -->
+  <section id="leaderboard" class="js-page" data-t="leaderboard">
+    <div class="tiles">
+      <div class="card tile" id="tile-sharpe"><div class="lbl">Best risk-adjusted (Sharpe ratio)</div>
+        <div class="big" data-draw="hl" data-f="top_sharpe" data-fmt="r2" data-source="headlines" data-field="top_sharpe">—</div>
+        <div class="sub"><b data-draw="hl" data-f="top_sharpe_sector" data-source="headlines" data-field="top_sharpe_sector">—</b></div></div>
+      <div class="card tile" id="tile-cagr"><div class="lbl">Highest annual growth (CAGR)</div>
+        <div class="big" data-draw="hl" data-f="top_cagr" data-fmt="pct" data-source="headlines" data-field="top_cagr">—</div>
+        <div class="sub"><b data-draw="hl" data-f="top_cagr_sector" data-source="headlines" data-field="top_cagr_sector">—</b></div></div>
+      <div class="card tile" id="tile-bench"><div class="lbl">Market benchmark CAGR</div>
+        <div class="big" data-draw="hl" data-f="bench_cagr" data-fmt="pct" data-source="headlines" data-field="bench_cagr">—</div>
+        <div class="sub"><b data-draw="hl" data-f="bench" data-source="headlines" data-field="bench">—</b></div></div>
+      <div class="card tile" id="tile-dd"><div class="lbl">Shallowest worst fall (max drawdown)</div>
+        <div class="big" data-draw="hl" data-f="min_dd" data-fmt="pct" data-source="headlines" data-field="min_dd">—</div>
+        <div class="sub"><b data-draw="hl" data-f="min_dd_sector" data-source="headlines" data-field="min_dd_sector">—</b></div></div>
+      <div class="card tile" id="tile-worst"><div class="lbl">Slowest growth (CAGR)</div>
+        <div class="big" data-draw="hl" data-f="worst_cagr" data-fmt="pct" data-source="headlines" data-field="worst_cagr">—</div>
+        <div class="sub"><b data-draw="hl" data-f="worst_cagr_sector" data-source="headlines" data-field="worst_cagr_sector">—</b></div></div>
+    </div>
+
+    <div class="grid">
+      <div class="card" id="card-scatter">
+        <h3>Risk vs return</h3>
+        <p class="note">Each dot is a sector: further right = bumpier ride (annual volatility), higher = faster growth (CAGR). Up-and-left is the sweet spot. The three best Sharpe ratios are highlighted; the ringed dot is the market benchmark.</p>
+        <div class="chart tall dash-skeleton" data-draw="scatter" data-source="metrics"></div>
+      </div>
+      <div class="card" id="card-sharpebar">
+        <h3>Sharpe ratio ranking</h3>
+        <p class="note">Excess return over cash per unit of total volatility. Above the dashed benchmark line = better reward for the risk than just owning the market.</p>
+        <div class="chart tall dash-skeleton" data-draw="sharpebar" data-source="metrics"></div>
+      </div>
+    </div>
+
+    <h2 id="h-table">Every metric, every sector</h2>
+    <p class="note">Click a column to sort. CAGR = compound annual growth; Excess = CAGR minus the benchmark's; Treynor = excess return per unit of beta (market risk); Alpha = Jensen's alpha, return unexplained by beta; Info ratio = excess return per unit of tracking error; Calmar = CAGR ÷ max drawdown; Up/Down capture = share of the market's up/down months the sector captured. Definitions are in Method &amp; caveats.</p>
+    <input class="search js-msearch" type="search" placeholder="Filter sectors…" aria-label="Filter sectors">
+    <div class="tbox">
+      <table id="metrics-table" data-source="metrics" data-row-key="key">
+        <thead><tr>
+          <th class="l js-sort" data-field="sector" data-k="sector">Sector</th>
+          <th class="js-sort" data-field="start" data-k="start">Since</th>
+          <th class="js-sort" data-field="cagr" data-k="cagr">CAGR %</th>
+          <th class="js-sort" data-field="excess" data-k="excess">Excess %</th>
+          <th class="js-sort" data-field="vol" data-k="vol">Volatility %</th>
+          <th class="js-sort" data-field="sharpe" data-k="sharpe" aria-sort="descending">Sharpe</th>
+          <th class="js-sort" data-field="sortino" data-k="sortino">Sortino</th>
+          <th class="js-sort" data-field="treynor" data-k="treynor">Treynor %</th>
+          <th class="js-sort" data-field="beta" data-k="beta">Beta</th>
+          <th class="js-sort" data-field="alpha" data-k="alpha">Alpha %</th>
+          <th class="js-sort" data-field="info_ratio" data-k="info_ratio">Info ratio</th>
+          <th class="js-sort" data-field="max_dd" data-k="max_dd">Max DD %</th>
+          <th class="js-sort" data-field="calmar" data-k="calmar">Calmar</th>
+          <th class="js-sort" data-field="best_year" data-k="best_year">Best yr %</th>
+          <th class="js-sort" data-field="worst_year" data-k="worst_year">Worst yr %</th>
+          <th class="js-sort" data-field="pct_pos" data-k="pct_pos">Up months %</th>
+          <th class="js-sort" data-field="up_cap" data-k="up_cap">Up capture %</th>
+          <th class="js-sort" data-field="down_cap" data-k="down_cap">Down capture %</th>
+          <th class="js-sort" data-field="var95" data-k="var95">VaR 95% (1m)</th>
+        </tr></thead>
+        <tbody data-draw="mtable"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ========================= GROWTH ========================= -->
+  <section id="growth" class="js-page" data-t="growth" hidden>
+    <p class="note">Pick up to six sectors to compare (the benchmark is always shown as a dashed line). Lines restart at 1 at the beginning of the selected period.</p>
+    <div class="chips" data-draw="chips" data-source="metrics"></div>
+    <div class="card" id="card-growth">
+      <h3>Growth of 1 invested</h3>
+      <p class="note">Log scale, so equal vertical distances mean equal percentage gains. US sectors are total return in USD; Indian baskets are price return in INR.</p>
+      <div class="chart tall dash-skeleton" data-draw="growthchart" data-source="series metrics headlines"></div>
+    </div>
+    <div class="grid" style="margin-top: var(--cds-gap-md)">
+      <div class="card" id="card-dd">
+        <h3>Drawdowns: fall from previous peak</h3>
+        <p class="note">How deep and how long each sector's losing spells were. This is the pain an investor actually lives through.</p>
+        <div class="chart dash-skeleton" data-draw="ddchart" data-source="series metrics headlines"></div>
+      </div>
+      <div class="card" id="card-rsharpe">
+        <h3>Rolling 3-year Sharpe ratio</h3>
+        <p class="note">Is the risk-adjusted edge steady or did it come from one lucky stretch? Above zero = beat cash over the trailing 3 years.</p>
+        <div class="chart dash-skeleton" data-draw="rschart" data-source="series metrics headlines"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= YEARS ========================= -->
+  <section id="years" class="js-page" data-t="years" hidden>
+    <div class="card" id="card-heat">
+      <h3>Calendar-year returns</h3>
+      <p class="note">Blue = gain, red = loss; deeper colour = bigger move. The last column is year-to-date. Notice how leadership rotates: last year's winner is rarely next year's.</p>
+      <div class="chart tall dash-skeleton" data-draw="yearheat" data-source="years headlines"></div>
+    </div>
+    <div class="card" id="card-eras" style="margin-top: var(--cds-gap-md)">
+      <h3>Decade by decade (annualised return)</h3>
+      <p class="note">Each sector's CAGR within each decade. The 2020s run to the latest month. Blank = sector data not yet available in that decade.</p>
+      <div class="chart dash-skeleton" data-draw="eraheat" data-source="eras headlines"></div>
+    </div>
+  </section>
+
+  <!-- ========================= DIVERSIFY ========================= -->
+  <section id="diversify" class="js-page" data-t="diversify" hidden>
+    <div class="card" id="card-corr">
+      <h3>How sectors move together (correlation of monthly returns, last 10 years)</h3>
+      <p class="note">1.0 = move in lockstep, 0 = unrelated. Pairing sectors with low correlation (pale or red cells) smooths a portfolio, because one tends to hold up when the other falls. Rows and columns share the numbering on the left.</p>
+      <div class="chart tall dash-skeleton" data-draw="corrheat" data-source="corr"></div>
+    </div>
+  </section>
+
+  <!-- ========================= OUTLOOK ========================= -->
+  <section id="outlook" class="js-page" data-t="outlook" hidden>
+    <div class="warnbox"><b>Read this first.</b> No one can reliably forecast which sector will win next. This page shows two honest things instead: (1) which sectors currently have the strongest <i>evidence-based signals</i> (momentum and trend, which research has found to persist modestly for months, not years), and (2) a test of how well past winners actually went on to win in this data. Use it as one input, never as a tip.</div>
+
+    <div class="card" id="card-signals">
+      <h3>Current signal board</h3>
+      <p class="note">Score = 50% 12-1 month momentum + 25% trend (price vs its 10-month average) + 25% trailing 3-year Sharpe, each standardised across sectors. Above +0.5 = Positive, below −0.5 = Negative. Signals as of the latest month of data.</p>
+      <div class="tbox">
+        <table id="outlook-table" data-source="outlook" data-row-key="key">
+          <thead><tr>
+            <th class="l" data-field="sector">Sector</th>
+            <th data-field="score">Score</th>
+            <th class="l" data-field="signal">Signal</th>
+            <th data-field="mom">12-1m momentum %</th>
+            <th data-field="trend">vs 10m avg %</th>
+            <th data-field="sharpe3y">3y Sharpe</th>
+            <th data-field="dd3y">Off 3y peak %</th>
+          </tr></thead>
+          <tbody data-draw="otable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <h2 id="h-persist">Does past performance predict future performance?</h2>
+    <p class="lede">Every year in the history, I ranked sectors by their past 3-year return and checked their next 3 years. The average rank correlation was <b data-draw="ps" data-f="avg_rho" data-fmt="r2" data-source="persist_sum" data-field="avg_rho">—</b> (1 = perfect prediction, 0 = none). The past top-3 sectors went on to return <b data-draw="ps" data-f="top3" data-fmt="pct" data-source="persist_sum" data-field="top3">—</b> over the next 3 years versus <b data-draw="ps" data-f="bottom3" data-fmt="pct" data-source="persist_sum" data-field="bottom3">—</b> for the past bottom-3, and beat them in <b data-draw="ps" data-f="pct_top_beat" data-fmt="pct0" data-source="persist_sum" data-field="pct_top_beat">—</b> of periods. In short: long-run past winners carry only a weak edge forward.</p>
+    <div class="grid">
+      <div class="card" id="card-persist">
+        <h3>Rank correlation: past 3 years vs next 3 years</h3>
+        <p class="note">Each bar is one starting year. Bars hop between positive and negative, so ranking by long-run past returns is close to a coin flip.</p>
+        <div class="chart dash-skeleton" data-draw="persistchart" data-source="persistence"></div>
+      </div>
+      <div class="card" id="card-strat">
+        <h3>Strategy backtests: what would have worked?</h3>
+        <p class="note">Top-3 momentum: each month hold the 3 sectors with the best 12-1 month return. Min-variance: each January, the lowest-risk sector mix from the prior 5 years. All-sector EW: equal weight in every sector. No costs or taxes included.</p>
+        <div class="chart dash-skeleton" data-draw="stratchart" data-source="strategies"></div>
+        <div class="legend" data-draw="stratlegend" data-source="strategies"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top: var(--cds-gap-md)" id="card-stratm">
+      <h3>Strategy results</h3>
+      <div class="tbox">
+        <table id="strat-table" data-source="strat_metrics" data-row-key="key">
+          <thead><tr>
+            <th class="l" data-field="strategy">Strategy</th><th data-field="start">From</th><th data-field="cagr">CAGR %</th><th data-field="vol">Volatility %</th>
+            <th data-field="sharpe">Sharpe</th><th data-field="sortino">Sortino</th><th data-field="max_dd">Max DD %</th><th data-field="beta">Beta</th><th data-field="alpha">Alpha %</th>
+          </tr></thead>
+          <tbody data-draw="stable"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= NSE ========================= -->
+  <section id="nse" class="js-page" data-t="nse" hidden>
+    <div class="warnbox"><b>Why this tab exists.</b> The Indian sectors elsewhere on this page are baskets of 3–8 well-known stocks each (back to 1997). Because those are today's survivors, they overstate what an investor could have earned. The official NSE sector indices below add and drop companies over time, so they don't have that bias, but Yahoo Finance only carries them from about 2011. Their returns are lower; the sector ordering is broadly similar. This tab ignores the market and period buttons.</div>
+    <div>
+      <div class="card" id="card-nsetable" style="margin-bottom: var(--cds-gap-md)">
+        <h3>Official NSE sector indices vs this project's baskets (Aug 2011 – latest)</h3>
+        <p class="note">Gap = basket CAGR minus index CAGR over the same months: the size of the survivorship (and equal-weighting) effect. Benchmark: Nifty 50. Price returns, INR.</p>
+        <div class="tbox">
+          <table id="nse-table" data-source="nse" data-row-key="key">
+            <thead><tr>
+              <th class="l" data-field="index">NSE index</th><th data-field="cagr">CAGR %</th><th data-field="vol">Volatility %</th><th data-field="sharpe">Sharpe</th>
+              <th data-field="treynor">Treynor %</th><th data-field="beta">Beta</th><th data-field="max_dd">Max DD %</th><th class="l" data-field="basket">Matching basket</th><th data-field="basket_cagr">Basket CAGR %</th><th data-field="gap">Gap pts</th>
+            </tr></thead>
+            <tbody data-draw="nsetable"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card" id="card-nsegrowth">
+        <h3>Growth of 1 in official NSE sector indices</h3>
+        <p class="note">Log scale. Dashed = Nifty 50. Hover for values.</p>
+        <div class="chart tall dash-skeleton" data-draw="nsechart" data-source="nse_growth"></div>
+        <div class="legend" data-draw="nselegend" data-source="nse_growth"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= STOCKS ========================= -->
+  <section id="stocks" class="js-page" data-t="stocks" hidden>
+    <p class="note">Which companies (or funds) make up each sector portfolio, and how each did on its own since it entered the data. Indian baskets are equal-weighted and rebalanced monthly. US sectors use Fidelity Select sector funds (real, investable total-return portfolios, after fees) plus a basket for Agri &amp; Fertilizers.</p>
+    <input class="search js-ssearch" type="search" placeholder="Filter by sector, ticker or name…" aria-label="Filter constituents">
+    <div class="tbox">
+      <table id="stocks-table" data-source="stocks" data-row-key="key">
+        <thead><tr>
+          <th class="l" data-field="sector">Sector</th><th class="l" data-field="ticker">Ticker</th><th class="l" data-field="name">Name</th>
+          <th data-field="since">In data since</th><th data-field="cagr">CAGR %</th><th data-field="vol">Volatility %</th><th data-field="last1y">Last 12m %</th>
+        </tr></thead>
+        <tbody data-draw="sttable"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ========================= METHOD ========================= -->
+  <section id="method" class="js-page" data-t="method" hidden>
+    <div class="grid">
+      <div class="card prose" id="card-howbuilt">
+        <h3>How the sector portfolios were built</h3>
+        <p><b>US (Feb 1990 – Oct 2026):</b> 21 Fidelity Select sector mutual funds, each a professionally run portfolio of the stocks in one industry (banks, chemicals, semiconductors, etc.), using total-return prices (dividends reinvested, after fund fees). Fertilizers have no long-running US fund, so "Agri &amp; Fertilizers" is an equal-weight basket of Mosaic, CF Industries, Nutrien, ADM and Deere. Benchmark: S&amp;P 500 Total Return. Risk-free rate: 13-week US Treasury bill.</p>
+        <p><b>India (Aug 1997 – Oct 2026):</b> 15 sectors, each an equal-weight, monthly-rebalanced basket of 3–8 established NSE stocks (85 stocks in total), including dedicated Chemicals and Fertilizers baskets. Stocks enter when their price history begins (mostly 1996–2007). Benchmark: BSE Sensex. Risk-free rate: approximate annual 91-day T-bill yields (RBI). Price returns, so dividends (roughly 1–1.5% a year) are excluded on both sides.</p>
+        <p><b>Data:</b> monthly prices from Yahoo Finance, pulled on 1 Nov 2026; the latest bar is October 2026. Full-period comparisons start when each sector's data starts (see the Since column).</p>
+        <p><b>Cleaning:</b> 190 Indian stock-months were excluded as bad data, mostly spike-and-reverse errors from mishandled stock splits (e.g. a +1,300% month undone the next month) plus each stock's first 2 months. They're listed below.</p>
+      </div>
+      <div class="card" id="card-defs">
+        <h3>What each measure means</h3>
+        <dl>
+          <dt>CAGR</dt><dd>Compound annual growth rate: the steady yearly return that would turn the starting value into the ending value.</dd>
+          <dt>Volatility</dt><dd>Annualised standard deviation of monthly returns. The typical size of swings.</dd>
+          <dt>Sharpe ratio</dt><dd>(Return − risk-free rate) ÷ volatility. Reward per unit of total risk. Above ~0.5 over decades is good for a single sector.</dd>
+          <dt>Sortino ratio</dt><dd>Like Sharpe, but only counts downside volatility, so upside bursts aren't penalised.</dd>
+          <dt>Treynor ratio</dt><dd>(Return − risk-free) ÷ beta. Reward per unit of market risk; useful when the sector is one piece of a diversified portfolio.</dd>
+          <dt>Beta</dt><dd>Sensitivity to the benchmark. 1.2 = moves about 1.2% for each 1% market move.</dd>
+          <dt>Jensen's alpha</dt><dd>Annual return beyond what beta alone would predict.</dd>
+          <dt>Information ratio</dt><dd>Average return over the benchmark ÷ tracking error (volatility of that difference). Consistency of outperformance.</dd>
+          <dt>Max drawdown</dt><dd>The worst peak-to-trough fall.</dd>
+          <dt>Calmar ratio</dt><dd>CAGR ÷ |max drawdown|. Growth per unit of worst-case pain.</dd>
+          <dt>Up / down capture</dt><dd>Average sector return in the market's up (down) months as a % of the market's. Ideal: high up, low down.</dd>
+          <dt>VaR 95%</dt><dd>A bad month: returns were worse than this only 5% of the time.</dd>
+        </dl>
+      </div>
+    </div>
+    <div class="card prose" style="margin-top: var(--cds-gap-md)" id="card-caveats">
+      <h3>Caveats worth knowing</h3>
+      <p><b>Survivorship bias (India):</b> baskets are made of companies that exist and are well known today, which flatters past returns, by roughly 3–8 points a year against official NSE indices since 2011 (see India reality check). Rankings are more trustworthy than levels.</p>
+      <p><b>Fund proxies (US):</b> Fidelity Select funds are actively managed and charge ~0.7% a year, so they trail a pure index slightly and may tilt within their sector.</p>
+      <p><b>Currencies:</b> US numbers are in USD, India in INR. They aren't directly comparable: the rupee lost value against the dollar over this period, and Indian cash rates were higher, which is why Indian Sharpe ratios look lower than their returns suggest.</p>
+      <p><b>Not advice:</b> this is historical analysis for learning and research, not a recommendation to buy or sell anything.</p>
+    </div>
+    <h2 id="h-flags">Excluded data points</h2>
+    <div class="tbox" style="max-height: 320px">
+      <table id="flags-table" data-source="flags" data-row-key="key">
+        <thead><tr><th class="l" data-field="ticker">Ticker</th><th class="l" data-field="month">Month</th><th data-field="raw_return">Raw monthly return %</th></tr></thead>
+        <tbody data-draw="ftable"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+
+  </div>
+</main>
+<footer>
+  Data: monthly prices from Yahoo Finance (pulled 1 Nov 2026; latest bar October 2026). US sectors use Fidelity Select sector funds (total return, USD); Indian sectors are equal-weight baskets of NSE stocks (price return, INR), cross-checked against official NSE indices. Historical analysis for education — not investment advice. Source code, data and methodology: <a href="https://github.com/PalakGupta7456/sector-performance-lab">github.com/PalakGupta7456/sector-performance-lab</a>.
+</footer>
+
+<script>
+// ---------------------------------------------------------------------------
+// Minimal runtime: loads the JSON datasets in /data and re-runs each chart
+// ("drawing") whenever data, filters, tab or width change.
+// ---------------------------------------------------------------------------
+window.dash = (function () {
+  const FILES = ['metrics','headlines','series','years','eras','corr','persistence','persist_sum','strategies','strat_metrics','outlook','nse','nse_growth','stocks','flags'];
+  const store = {}, status = {}, draws = new Map(), watchers = [];
+  const DEFAULTS = { market: 'US', win: 'Full' };
+  let params = Object.assign({}, DEFAULTS), queued = false;
+  const PAL = {
+    light: ['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300','#6250d6','#e34948'],
+    dark:  ['#3987e5','#d95926','#199e70','#c98500','#d55181','#008300','#9085e9','#e66767'],
+  };
+  const api = {
+    get colors() { return PAL[document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light']; },
+    data(id) {
+      if (!status[id]) load(id);
+      const s = status[id];
+      return { status: s === 'ok' ? 'ok' : s === 'error' ? 'error' : 'loading', data: store[id] || [], refreshing: false, meta: [] };
+    },
+    draw(name, fn) { if (fn) draws.set(name, fn); schedule(); },
+    onData(fn) { watchers.push(fn); schedule(); },
+    params() { return Object.assign({}, params); },
+    setParams(o) { Object.assign(params, o); schedule(); },
+    resetParams() { params = Object.assign({}, DEFAULTS); schedule(); },
+    setLink(name) { try { history.replaceState(null, '', '#' + name); } catch (e) {} schedule(); },
+    calc() {}, loader() {}, refresh() {},
+  };
+  function load(id) {
+    status[id] = 'loading';
+    fetch('data/' + id + '.json').then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then((j) => { store[id] = j.rows || j; status[id] = 'ok'; schedule(); })
+      .catch(() => { status[id] = 'error'; schedule(); });
+  }
+  function schedule() { if (queued) return; queued = true; requestAnimationFrame(run); }
+  function run() {
+    queued = false;
+    watchers.forEach((fn) => { try { fn(); } catch (e) { console.error(e); } });
+    draws.forEach((fn, name) => {
+      document.querySelectorAll('[data-draw="' + name + '"]').forEach((el) => {
+        if (el.closest('[hidden]')) return;
+        try { fn(el); } catch (e) { console.error(name, e); }
+      });
+    });
+  }
+  let lastW = 0;
+  new ResizeObserver(() => { const w = document.getElementById('dash-root').clientWidth; if (Math.abs(w - lastW) > 4) { lastW = w; schedule(); } }).observe(document.getElementById('dash-root'));
+  if (!FILES.length) schedule();
+  return api;
+})();
+document.getElementById('theme-toggle').addEventListener('click', () => {
+  const t = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  try { localStorage.setItem('slab-theme', t); } catch (e) {}
+  dash.setParams({});
+});
+</script>
+<script>
+(() => {
+  // ---------- state & helpers ----------
+  const st = { tab: 'leaderboard', sortK: 'sharpe', sortDir: -1, mq: '', sq: '', picks: { US: null, India: null } };
+  const DEFAULT_PICKS = { US: ['Technology', 'Health Care', 'Energy', 'Banks'], India: ['IT Services', 'Pharma', 'Chemicals', 'Fertilizers'] };
+  const prm = () => ({ market: dash.params().market || 'US', win: dash.params().win || 'Full' });
+  const ok = (id) => { const r = dash.data(id); return r.status === 'ok' ? r.data : null; };
+  const failed = (id) => dash.data(id).status === 'error';
+  const n = (v) => v === null || v === undefined || Number.isNaN(v);
+  const F = {
+    pct: (v) => n(v) ? '—' : `${(+v).toFixed(1)}%`,
+    pct0: (v) => n(v) ? '—' : `${Math.round(v)}%`,
+    r2: (v) => n(v) ? '—' : (+v).toFixed(2),
+    int: (v) => n(v) ? '—' : String(Math.round(v)),
+    txt: (v) => n(v) ? '—' : String(v),
+    num1: (v) => n(v) ? '—' : (+v).toFixed(1),
+  };
+  const parseM = (s) => new Date(Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, 1));
+  const fmtM = d3.utcFormat('%b %Y');
+  const C = () => dash.colors;
+  const winStart = () => {
+    const h = ok('headlines'); if (!h) return null;
+    const r = h.find((x) => x.key === `${prm().market === 'India' ? 'IN' : 'US'}-${prm().win}`);
+    return r ? r.start : null;
+  };
+  const mkKey = () => `${prm().market === 'India' ? 'IN' : 'US'}-${prm().win}`;
+  const failBox = (el) => { el.classList.remove('dash-skeleton'); const d = document.createElement('div'); d.className = 'fail'; d.textContent = 'Failed to load'; el.replaceChildren(d); };
+  const waiting = (el, id) => { if (failed(id)) { failBox(el); return true; } if (!ok(id)) { el.classList.add('dash-skeleton'); el.replaceChildren(); return true; } el.classList.remove('dash-skeleton'); return false; };
+  const mkSvg = (el, h) => {
+    const w = Math.max(280, el.clientWidth);
+    const svg = d3.create('svg').attr('width', '100%').attr('viewBox', `0 0 ${w} ${h}`).attr('height', h);
+    const tip = document.createElement('div'); tip.className = 'tip'; tip.hidden = true;
+    el.replaceChildren(svg.node(), tip);
+    return { svg, w, h, tip };
+  };
+  const placeTip = (el, tip, x, y) => {
+    tip.hidden = false;
+    const tw = tip.offsetWidth, th = tip.offsetHeight, W = el.clientWidth;
+    let left = x + 14; if (left + tw > W) left = x - tw - 14; if (left < 0) left = 0;
+    let top = y - th / 2; if (top < 0) top = 0;
+    tip.style.left = left + 'px'; tip.style.top = top + 'px';
+  };
+  const tipLines = (tip, title, lines) => {
+    const t = document.createElement('div'); t.className = 't'; t.textContent = title;
+    const out = [t];
+    for (const [color, name, val] of lines) {
+      const d = document.createElement('div');
+      if (color) { const s = document.createElement('span'); s.className = 'sw'; s.style.background = color; d.append(s); }
+      d.append(document.createTextNode(`${name}: `));
+      const b = document.createElement('b'); b.textContent = val; d.append(b);
+      out.push(d);
+    }
+    tip.replaceChildren(...out);
+  };
+  const styleAxis = (g) => {
+    g.attr('font-size', null).attr('font-family', null);
+    g.selectAll('text').style('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)');
+    g.selectAll('.domain').style('stroke', 'var(--cds-chart-axis)');
+    g.selectAll('.tick line').style('stroke', 'var(--cds-chart-grid)');
+  };
+  const textW = (svg, s) => { const t = svg.append('text').style('font-size', 'var(--cds-font-size-caption)').text(s); const w = t.node().getComputedTextLength(); t.remove(); return w; };
+  const diverge = (v, maxAbs) => {
+    if (n(v)) return 'transparent';
+    const t = Math.min(Math.abs(v) / maxAbs, 1) * 88;
+    const col = v >= 0 ? C()[0] : C()[7];
+    return `color-mix(in oklab, ${col} ${t.toFixed(0)}%, var(--color-panel))`;
+  };
+  const inkOn = (v, maxAbs) => (!n(v) && Math.min(Math.abs(v) / maxAbs, 1) > 0.6 ? '#ffffff' : 'var(--color-fg)');
+
+  // ---------- generic line chart ----------
+  function lineChart(el, { series, log = false, yfmt = (v) => v.toFixed(2), height = 320, zero = false, tipfmt }) {
+    const { svg, w, h, tip } = mkSvg(el, height);
+    const all = series.flatMap((s) => s.points);
+    if (!all.length) return;
+    const xs = d3.extent(all, (p) => p.d);
+    let ys = d3.extent(all, (p) => p.v);
+    if (zero) ys = [Math.min(0, ys[0]), Math.max(0, ys[1])];
+    if (log) ys = [ys[0] / 1.06, ys[1] * 1.06];
+    const y = log ? d3.scaleLog().domain(ys).range([h - 26, 10]) : d3.scaleLinear().domain(ys).range([h - 26, 10]).nice();
+    const ticks = log ? y.ticks(6).filter((t, i, a) => a.length < 8 || [1, 2, 5].includes(+String(t)[0])) : y.ticks(6);
+    const ml = Math.max(...ticks.map((t) => textW(svg, yfmt(t)))) + 10;
+    const endLabels = series.filter((s) => s.label);
+    const mr = endLabels.length ? Math.min(150, Math.max(...endLabels.map((s) => textW(svg, s.label))) + 12) : 10;
+    const x = d3.scaleUtc().domain(xs).range([ml, w - mr]);
+    svg.append('g').attr('transform', `translate(${ml},0)`).call(d3.axisLeft(y).tickValues(ticks).tickFormat(yfmt).tickSize(-(w - ml - mr))).call(styleAxis).call((g) => g.select('.domain').remove());
+    svg.append('g').attr('transform', `translate(0,${h - 26})`).call(d3.axisBottom(x).ticks(Math.max(2, Math.floor((w - ml - mr) / 80)))).call(styleAxis);
+    if (zero && !log) svg.append('line').attr('x1', ml).attr('x2', w - mr).attr('y1', y(0)).attr('y2', y(0)).style('stroke', 'var(--cds-chart-reference)');
+    const line = d3.line().defined((p) => !n(p.v)).x((p) => x(p.d)).y((p) => y(p.v));
+    for (const s of series) {
+      svg.append('path').datum(s.points).attr('d', line).attr('fill', 'none')
+        .style('stroke', s.color).attr('stroke-width', s.width || 2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round')
+        .attr('stroke-dasharray', s.dash || null).attr('opacity', s.opacity || 1);
+    }
+    // end labels, nudged apart
+    const labs = endLabels.map((s) => { const p = s.points[s.points.length - 1]; return { s, y: y(p.v) }; }).sort((a, b) => a.y - b.y);
+    for (let i = 1; i < labs.length; i++) if (labs[i].y - labs[i - 1].y < 13) labs[i].y = labs[i - 1].y + 13;
+    for (const l of labs) svg.append('text').attr('x', w - mr + 6).attr('y', l.y).attr('dy', '0.32em').style('font-size', 'var(--cds-font-size-caption)').style('fill', 'var(--color-fg-muted)').text(l.s.label);
+    // hover
+    const dates = Array.from(new Set(all.map((p) => +p.d))).sort((a, b) => a - b);
+    const rule = svg.append('line').attr('y1', 10).attr('y2', h - 26).style('stroke', 'var(--cds-chart-axis)').attr('opacity', 0);
+    const dots = svg.append('g');
+    svg.append('rect').attr('x', ml).attr('y', 0).attr('width', w - ml - mr).attr('height', h - 26).attr('fill', 'transparent')
+      .on('pointermove', (ev) => {
+        const [mx] = d3.pointer(ev);
+        const target = +x.invert(mx);
+        const d = dates[Math.max(0, Math.min(dates.length - 1, d3.bisectCenter(dates, target)))];
+        const px = x(new Date(d));
+        rule.attr('x1', px).attr('x2', px).attr('opacity', 1);
+        const lines = [];
+        dots.selectAll('*').remove();
+        for (const s of series) {
+          if (s.noTip) continue;
+          const p = s.points.find((q) => +q.d === d);
+          if (!p || n(p.v)) continue;
+          lines.push([s.color, s.name, (tipfmt || yfmt)(p.v)]);
+          dots.append('circle').attr('cx', px).attr('cy', y(p.v)).attr('r', 4).style('fill', s.color).style('stroke', 'var(--color-panel)').attr('stroke-width', 2);
+        }
+        tipLines(tip, fmtM(new Date(d)), lines);
+        const r = el.getBoundingClientRect(), sr = svg.node().getBoundingClientRect();
+        placeTip(el, tip, (px / w) * sr.width + (sr.left - r.left), d3.pointer(ev, el)[1]);
+      })
+      .on('pointerleave', () => { tip.hidden = true; rule.attr('opacity', 0); dots.selectAll('*').remove(); });
+  }
+
+  // ---------- generic heatmap ----------
+  function heatmap(el, { rows, cols, val, color, ink, fmt, rowLabel = (r) => r, colLabel = (c) => c, tipTitle, cellH = 22 }) {
+    const top = 22;
+    const h = top + rows.length * cellH + 4;
+    const { svg, w, tip } = mkSvg(el, h);
+    const ml = Math.min(w * 0.45, Math.max(...rows.map((r) => textW(svg, rowLabel(r)))) + 10);
+    const cw = (w - ml) / cols.length;
+    const every = Math.ceil(36 / cw);
+    cols.forEach((c, i) => { if (i % every === 0 || i === cols.length - 1) svg.append('text').attr('x', ml + i * cw + cw / 2).attr('y', 14).attr('text-anchor', 'middle').style('font-size', 'var(--cds-font-size-caption)').style('fill', 'var(--color-fg-muted)').text(colLabel(c)); });
+    rows.forEach((r, j) => {
+      svg.append('text').attr('x', ml - 8).attr('y', top + j * cellH + cellH / 2).attr('dy', '0.32em').attr('text-anchor', 'end').style('font-size', 'var(--cds-font-size-caption)').style('fill', 'var(--color-fg)').text(rowLabel(r));
+      cols.forEach((c, i) => {
+        const v = val(r, c);
+        if (n(v)) return;
+        const g = svg.append('g');
+        g.append('rect').attr('x', ml + i * cw + 1).attr('y', top + j * cellH + 1).attr('width', Math.max(1, cw - 2)).attr('height', cellH - 2).attr('rx', 2).style('fill', color(v));
+        if (cw >= 34) g.append('text').attr('x', ml + i * cw + cw / 2).attr('y', top + j * cellH + cellH / 2).attr('dy', '0.32em').attr('text-anchor', 'middle').style('font-size', '10px').style('fill', ink(v)).style('font-variant-numeric', 'tabular-nums').text(fmt(v, true));
+        g.on('pointerenter pointermove', (ev) => {
+          tipLines(tip, tipTitle(r, c), [[null, rowLabel(r), fmt(v)]]);
+          const [px, py] = d3.pointer(ev, el); placeTip(el, tip, px, py);
+        }).on('pointerleave', () => { tip.hidden = true; });
+      });
+    });
+  }
+
+  // ---------- controls ----------
+  document.querySelectorAll('.js-market').forEach((b) => b.addEventListener('click', () => dash.setParams({ market: b.dataset.v })));
+  document.querySelectorAll('.js-win').forEach((b) => b.addEventListener('click', () => dash.setParams({ win: b.dataset.v })));
+  const showTab = (t) => { st.tab = t; dash.setLink(t); syncTabs(); };
+  document.querySelectorAll('.js-tab').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.t)));
+  const syncTabs = () => {
+    document.querySelectorAll('.js-tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.t === st.tab)));
+    document.querySelectorAll('.js-page').forEach((s) => { if (s.dataset.t === st.tab) s.removeAttribute('hidden'); else s.setAttribute('hidden', ''); });
+  };
+  const hash = location.hash.slice(1);
+  if ([...document.querySelectorAll('.js-page')].some((s) => s.dataset.t === hash)) st.tab = hash;
+  syncTabs();
+  document.querySelectorAll('.js-sort').forEach((th) => th.addEventListener('click', () => {
+    const k = th.dataset.k;
+    if (st.sortK === k) st.sortDir *= -1; else { st.sortK = k; st.sortDir = (k === 'sector' || k === 'start') ? 1 : -1; }
+    document.querySelectorAll('.js-sort').forEach((t) => { if (t.dataset.k === st.sortK) t.setAttribute('aria-sort', st.sortDir < 0 ? 'descending' : 'ascending'); else t.removeAttribute('aria-sort'); });
+    dash.draw('mtable');
+  }));
+  document.querySelectorAll('.js-msearch').forEach((i) => i.addEventListener('input', () => { st.mq = i.value.toLowerCase(); dash.draw('mtable'); }));
+  document.querySelectorAll('.js-ssearch').forEach((i) => i.addEventListener('input', () => { st.sq = i.value.toLowerCase(); dash.draw('sttable'); }));
+
+  dash.onData(() => {
+    const p = prm();
+    document.querySelectorAll('.js-market').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === p.market)));
+    document.querySelectorAll('.js-win').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === p.win)));
+    syncTabs();
+  });
+
+  // ---------- headline words & tiles ----------
+  dash.draw('hl', (el) => {
+    const h = ok('headlines');
+    const r = h && h.find((x) => x.key === mkKey());
+    el.setAttribute('data-where', `key=${mkKey()}`);
+    el.textContent = r ? (F[el.dataset.fmt || 'txt'])(r[el.dataset.f]) : '—';
+  });
+  dash.draw('ps', (el) => {
+    const h = ok('persist_sum');
+    const r = h && h.find((x) => x.market === prm().market);
+    el.setAttribute('data-where', `market=${prm().market}`);
+    el.textContent = r ? (F[el.dataset.fmt || 'txt'])(r[el.dataset.f]) : '—';
+  });
+
+  const curMetrics = () => { const m = ok('metrics'); if (!m) return null; const p = prm(); return m.filter((r) => r.market === p.market && r.window === p.win); };
+
+  // ---------- scatter ----------
+  dash.draw('scatter', (el) => {
+    if (waiting(el, 'metrics')) return;
+    const rows = curMetrics().filter((r) => !n(r.vol) && !n(r.cagr));
+    const { svg, w, h, tip } = mkSvg(el, 420);
+    const x = d3.scaleLinear().domain(d3.extent(rows, (r) => r.vol)).nice().range([0, 1]);
+    const y = d3.scaleLinear().domain(d3.extent(rows, (r) => r.cagr)).nice().range([h - 44, 10]);
+    const yt = y.ticks(6);
+    const ml = Math.max(...yt.map((t) => textW(svg, `${t}%`))) + 10;
+    x.range([ml, w - 14]);
+    svg.append('g').attr('transform', `translate(${ml},0)`).call(d3.axisLeft(y).tickValues(yt).tickFormat((t) => `${t}%`).tickSize(-(w - ml - 14))).call(styleAxis).call((g) => g.select('.domain').remove());
+    svg.append('g').attr('transform', `translate(0,${h - 44})`).call(d3.axisBottom(x).ticks(6).tickFormat((t) => `${t}%`)).call(styleAxis);
+    svg.append('text').attr('x', w - 14).attr('y', h - 4).attr('text-anchor', 'end').style('font-size', 'var(--cds-font-size-caption)').style('fill', 'var(--color-fg-muted)').text('Volatility →');
+    svg.append('text').attr('x', ml + 4).attr('y', 18).style('font-size', 'var(--cds-font-size-caption)').style('fill', 'var(--color-fg-muted)').text('↑ CAGR');
+    const secs = rows.filter((r) => r.kind === 'sector');
+    const top3 = new Set(secs.filter((r) => !n(r.sharpe)).sort((a, b) => b.sharpe - a.sharpe).slice(0, 3).map((r) => r.sector));
+    const ord = [...rows].sort((a, b) => (top3.has(a.sector) ? 1 : 0) - (top3.has(b.sector) ? 1 : 0));
+    const labelled = [];
+    for (const r of ord) {
+      const cx = x(r.vol), cy = y(r.cagr);
+      const isB = r.kind === 'benchmark', isP = r.kind === 'portfolio', hot = top3.has(r.sector);
+      const g = svg.append('g');
+      if (isB) g.append('circle').attr('cx', cx).attr('cy', cy).attr('r', 7).style('fill', 'none').style('stroke', 'var(--color-fg)').attr('stroke-width', 2);
+      else if (isP) g.append('rect').attr('x', cx - 5).attr('y', cy - 5).attr('width', 10).attr('height', 10).attr('transform', `rotate(45 ${cx} ${cy})`).style('fill', 'var(--color-fg)').style('stroke', 'var(--color-panel)').attr('stroke-width', 2);
+      else g.append('circle').attr('cx', cx).attr('cy', cy).attr('r', hot ? 6 : 5).style('fill', hot ? C()[0] : 'var(--cds-chart-muted)').style('stroke', 'var(--color-panel)').attr('stroke-width', 2);
+      g.append('circle').attr('cx', cx).attr('cy', cy).attr('r', 12).attr('fill', 'transparent')
+        .on('pointerenter pointermove', (ev) => {
+          tipLines(tip, r.sector, [[null, 'CAGR', F.pct(r.cagr)], [null, 'Volatility', F.pct(r.vol)], [null, 'Sharpe', F.r2(r.sharpe)], [null, 'Max drawdown', F.pct(r.max_dd)]]);
+          const [px, py] = d3.pointer(ev, el); placeTip(el, tip, px, py);
+        }).on('pointerleave', () => { tip.hidden = true; });
+      if (hot || isB || isP) labelled.push({ r, cx, cy, hot });
+    }
+    // labels with simple collision avoidance
+    const boxes = [];
+    for (const l of labelled) {
+      const tw = textW(svg, l.r.sector);
+      let lx = l.cx + 9, ly = l.cy - 9;
+      if (lx + tw > w - 4) lx = l.cx - 9 - tw;
+      for (let k = 0; k < 6 && boxes.some((b) => Math.abs(b.y - ly) < 15 && lx < b.x + b.w && lx + tw > b.x); k++) ly += 15;
+      boxes.push({ x: lx, y: ly, w: tw });
+      svg.append('text').attr('x', lx).attr('y', ly).attr('dy', '0.32em').style('font-size', 'var(--cds-font-size-caption)').style('fill', 'var(--color-fg)').style('font-weight', l.hot ? 600 : 400).text(l.r.sector);
+    }
+  });
+
+  // ---------- sharpe ranking bars ----------
+  dash.draw('sharpebar', (el) => {
+    if (waiting(el, 'metrics')) return;
+    const rows = curMetrics().filter((r) => !n(r.sharpe)).sort((a, b) => b.sharpe - a.sharpe);
+    const bh = 18, gap = 4, top = 4;
+    const h = top + rows.length * (bh + gap) + 24;
+    const { svg, w, tip } = mkSvg(el, h);
+    const ml = Math.max(...rows.map((r) => textW(svg, r.sector))) + 10;
+    const ext = d3.extent([0, ...rows.map((r) => r.sharpe)]);
+    const x = d3.scaleLinear().domain(ext).nice().range([ml, w - 40]);
+    svg.append('g').attr('transform', `translate(0,${h - 22})`).call(d3.axisBottom(x).ticks(5).tickSize(-(h - 26))).call(styleAxis).call((g) => g.select('.domain').remove());
+    const bench = rows.find((r) => r.kind === 'benchmark');
+    rows.forEach((r, i) => {
+      const yy = top + i * (bh + gap);
+      const isB = r.kind === 'benchmark', isP = r.kind === 'portfolio';
+      svg.append('text').attr('x', ml - 8).attr('y', yy + bh / 2).attr('dy', '0.32em').attr('text-anchor', 'end').style('font-size', 'var(--cds-font-size-caption)').style('fill', 'var(--color-fg)').style('font-weight', isB ? 600 : 400).text(r.sector);
+      const x0 = x(Math.min(0, r.sharpe)), x1 = x(Math.max(0, r.sharpe));
+      const above = bench && r.sharpe > bench.sharpe;
+      svg.append('rect').attr('x', x0).attr('y', yy).attr('width', Math.max(1, x1 - x0)).attr('height', bh).attr('rx', 3)
+        .style('fill', isB ? 'var(--color-fg)' : isP ? 'var(--cds-chart-muted)' : (above ? C()[0] : 'var(--cds-chart-muted)'))
+        .on('pointerenter pointermove', (ev) => { tipLines(tip, r.sector, [[null, 'Sharpe', F.r2(r.sharpe)], [null, 'CAGR', F.pct(r.cagr)], [null, 'Volatility', F.pct(r.vol)]]); const [px, py] = d3.pointer(ev, el); placeTip(el, tip, px, py); })
+        .on('pointerleave', () => { tip.hidden = true; });
+      svg.append('text').attr('x', x1 + 5).attr('y', yy + bh / 2).attr('dy', '0.32em').style('font-size', 'var(--cds-font-size-caption)').style('fill', 'var(--color-fg-muted)').style('font-variant-numeric', 'tabular-nums').text(F.r2(r.sharpe));
+    });
+    if (bench) svg.append('line').attr('x1', x(bench.sharpe)).attr('x2', x(bench.sharpe)).attr('y1', 0).attr('y2', h - 22).style('stroke', 'var(--cds-chart-reference)').attr('stroke-dasharray', '4 3');
+  });
+
+  // ---------- metrics table ----------
+  const MCOLS = ['sector', 'start', 'cagr', 'excess', 'vol', 'sharpe', 'sortino', 'treynor', 'beta', 'alpha', 'info_ratio', 'max_dd', 'calmar', 'best_year', 'worst_year', 'pct_pos', 'up_cap', 'down_cap', 'var95'];
+  const MF = { sector: F.txt, start: F.txt, beta: F.r2, sharpe: F.r2, sortino: F.r2, info_ratio: F.r2, calmar: F.r2, pct_pos: F.int, up_cap: F.int, down_cap: F.int };
+  const signed = new Set(['excess', 'alpha']);
+  dash.draw('mtable', (el) => {
+    const rows = curMetrics();
+    if (!rows) { el.replaceChildren(); return; }
+    const k = st.sortK, dir = st.sortDir;
+    const list = rows.filter((r) => !st.mq || r.sector.toLowerCase().includes(st.mq))
+      .sort((a, b) => { const A = a[k], B = b[k]; if (n(A)) return 1; if (n(B)) return -1; return (typeof A === 'string' ? A.localeCompare(B) : A - B) * dir; });
+    el.replaceChildren(...list.map((r) => {
+      const tr = document.createElement('tr'); tr.dataset.key = r.key;
+      if (r.kind === 'benchmark') tr.className = 'bench'; if (r.kind === 'portfolio') tr.className = 'port';
+      for (const c of MCOLS) {
+        const td = document.createElement('td');
+        const v = r[c];
+        td.textContent = n(v) ? '—' : (MF[c] ? MF[c](v) : (+v).toFixed(1));
+        if (c === 'sector') td.className = 'l';
+        if (signed.has(c) && !n(v)) td.className = v >= 0 ? 'pos' : 'neg';
+        tr.append(td);
+      }
+      return tr;
+    }));
+  });
+
+  // ---------- sector chips ----------
+  const picksFor = (market, available) => {
+    if (!available.length) return [];
+    if (!st.picks[market]) st.picks[market] = DEFAULT_PICKS[market].filter((s) => available.includes(s));
+    return st.picks[market];
+  };
+  const sectorList = () => { const m = ok('metrics'); if (!m) return []; const p = prm(); return m.filter((r) => r.market === p.market && r.window === 'Full' && r.kind !== 'benchmark').map((r) => r.sector); };
+  dash.draw('chips', (el) => {
+    const list = sectorList();
+    if (!list.length) { el.replaceChildren(); return; }
+    const p = prm(); const picks = picksFor(p.market, list);
+    el.replaceChildren(...list.map((s) => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'chip';
+      const on = picks.includes(s); b.setAttribute('aria-pressed', String(on));
+      const sw = document.createElement('span'); sw.className = 'sw'; if (on) sw.style.background = C()[picks.indexOf(s)];
+      b.append(sw, document.createTextNode(s));
+      b.addEventListener('click', () => {
+        const cur = st.picks[p.market];
+        if (cur.includes(s)) cur.splice(cur.indexOf(s), 1); else if (cur.length < 6) cur.push(s);
+        dash.draw('chips'); dash.draw('growthchart'); dash.draw('ddchart'); dash.draw('rschart');
+      });
+      return b;
+    }));
+  });
+
+  const seriesFor = (field, rebase) => {
+    const s = ok('series'); if (!s) return null;
+    const p = prm(); const start = winStart() || '0000';
+    const list = sectorList(); const picks = picksFor(p.market, list);
+    const h = ok('headlines'); const benchName = h && (h.find((x) => x.key === mkKey()) || {}).bench;
+    const rows = s.filter((r) => r.market === p.market && r.date >= start);
+    const by = d3.group(rows, (r) => r.sector);
+    const mk = (name, color, extra = {}) => {
+      const pts = (by.get(name) || []).map((r) => ({ d: parseM(r.date), v: r[field] }));
+      if (rebase && pts.length) { const b0 = pts[0].v; pts.forEach((q) => { q.v = q.v / b0; }); }
+      return { name, color, points: pts, label: name, ...extra };
+    };
+    const out = picks.map((nm, i) => mk(nm, C()[i]));
+    if (benchName && field !== 'rsharpe') out.push(mk(benchName, 'var(--color-fg)', { dash: '5 4', width: 1.5 }));
+    return out;
+  };
+  const toDD = (ser) => ser.map((s) => { let pk = -Infinity; return { ...s, points: s.points.map((q) => { pk = Math.max(pk, q.v); return { d: q.d, v: (q.v / pk - 1) * 100 }; }) }; });
+
+  dash.draw('growthchart', (el) => {
+    if (waiting(el, 'series') || !ok('metrics') || !ok('headlines')) return;
+    const ser = seriesFor('growth', true); if (!ser) return;
+    lineChart(el, { series: ser, log: true, height: 420, yfmt: (v) => (v >= 10 ? d3.format(',.0f')(v) : v >= 1 ? d3.format('.1f')(v) : d3.format('.2f')(v)) + '×' });
+  });
+  dash.draw('ddchart', (el) => {
+    if (waiting(el, 'series') || !ok('metrics') || !ok('headlines')) return;
+    const ser = seriesFor('growth', true); if (!ser) return;
+    lineChart(el, { series: toDD(ser).map((s) => ({ ...s, label: null })), height: 320, zero: true, yfmt: (v) => `${Math.round(v)}%`, tipfmt: (v) => `${v.toFixed(1)}%` });
+  });
+  dash.draw('rschart', (el) => {
+    if (waiting(el, 'series') || !ok('metrics') || !ok('headlines')) return;
+    const ser = seriesFor('rsharpe', false); if (!ser) return;
+    lineChart(el, { series: ser.map((s) => ({ ...s, label: null, points: s.points.filter((q) => !n(q.v)) })), height: 320, zero: true, yfmt: (v) => v.toFixed(1), tipfmt: (v) => v.toFixed(2) });
+  });
+
+  // ---------- year heatmap & eras ----------
+  dash.draw('yearheat', (el) => {
+    if (waiting(el, 'years')) return;
+    const p = prm(); const rows = ok('years').filter((r) => r.market === p.market);
+    const years = Array.from(new Set(rows.map((r) => r.year))).sort((a, b) => a - b);
+    const ytd = rows.find((r) => r.ytd);
+    const m = new Map(rows.map((r) => [`${r.sector}|${r.year}`, r.ret]));
+    const h = ok('headlines'); const bench = h && (h.find((x) => x.key === mkKey()) || {}).bench;
+    const secs = Array.from(new Set(rows.map((r) => r.sector))).filter((s) => s !== bench);
+    secs.sort((a, b) => a.localeCompare(b)); if (bench) secs.push(bench);
+    heatmap(el, { rows: secs, cols: years, val: (r, c) => m.get(`${r}|${c}`), color: (v) => diverge(v, 60), ink: (v) => inkOn(v, 60),
+      fmt: (v, short) => short ? Math.round(v) : `${v > 0 ? '+' : ''}${v.toFixed(1)}%`,
+      colLabel: (c) => (ytd && c === ytd.year ? `${c}*` : (years.length > 20 ? `'${String(c).slice(2)}` : String(c))),
+      tipTitle: (r, c) => `${c}${ytd && c === ytd.year ? ' (year to date)' : ''}` });
+  });
+  dash.draw('eraheat', (el) => {
+    if (waiting(el, 'eras')) return;
+    const p = prm(); const rows = ok('eras').filter((r) => r.market === p.market);
+    const eras = Array.from(new Set(rows.map((r) => r.era)));
+    const m = new Map(rows.map((r) => [`${r.sector}|${r.era}`, r.cagr]));
+    const h = ok('headlines'); const bench = h && (h.find((x) => x.key === mkKey()) || {}).bench;
+    const secs = Array.from(new Set(rows.map((r) => r.sector))).filter((s) => s !== bench).sort((a, b) => a.localeCompare(b));
+    if (bench) secs.push(bench);
+    heatmap(el, { rows: secs, cols: eras, val: (r, c) => m.get(`${r}|${c}`), color: (v) => diverge(v, 30), ink: (v) => inkOn(v, 30),
+      fmt: (v) => `${v.toFixed(1)}%`, tipTitle: (r, c) => `The ${c}: annualised` });
+  });
+
+  // ---------- correlation ----------
+  dash.draw('corrheat', (el) => {
+    if (waiting(el, 'corr')) return;
+    const p = prm(); const rows = ok('corr').filter((r) => r.market === p.market);
+    const labels = Array.from(new Set(rows.map((r) => r.a)));
+    const m = new Map(rows.map((r) => [`${r.a}|${r.b}`, r.rho]));
+    const idx = new Map(labels.map((l, i) => [l, i + 1]));
+    heatmap(el, { rows: labels, cols: labels, val: (r, c) => m.get(`${r}|${c}`),
+      color: (v) => diverge(v, 1), ink: (v) => inkOn(v, 1), fmt: (v, short) => short ? v.toFixed(2).replace(/^(-?)0\./, '$1.') : v.toFixed(2),
+      rowLabel: (r) => `${idx.get(r)}  ${r}`, colLabel: (c) => String(idx.get(c)),
+      tipTitle: (r, c) => `${r} × ${c}`, cellH: 24 });
+  });
+
+  // ---------- outlook ----------
+  dash.draw('otable', (el) => {
+    const o = ok('outlook'); if (!o) { el.replaceChildren(); return; }
+    const p = prm(); const rows = o.filter((r) => r.market === p.market).sort((a, b) => b.score - a.score);
+    const maxS = Math.max(...rows.map((r) => Math.abs(r.score)));
+    el.replaceChildren(...rows.map((r) => {
+      const tr = document.createElement('tr'); tr.dataset.key = r.key;
+      const td = (txt, cls) => { const t = document.createElement('td'); t.textContent = txt; if (cls) t.className = cls; return t; };
+      const sc = document.createElement('td');
+      const bar = document.createElement('span'); bar.className = 'scorebar';
+      bar.style.width = `${(Math.abs(r.score) / maxS) * 60}px`; bar.style.background = r.score >= 0 ? C()[0] : C()[7]; bar.style.marginRight = '6px';
+      sc.append(bar, document.createTextNode(F.r2(r.score)));
+      const sg = document.createElement('td'); sg.className = 'l';
+      const s = document.createElement('span'); s.className = 'sig';
+      const icon = r.signal === 'Positive' ? '▲' : r.signal === 'Negative' ? '▼' : '●';
+      s.style.color = r.signal === 'Positive' ? 'var(--color-ok)' : r.signal === 'Negative' ? 'var(--color-bad)' : 'var(--color-fg-muted)';
+      s.textContent = `${icon} ${r.signal}`; sg.append(s);
+      tr.append(td(r.sector, 'l'), sc, sg, td(F.num1(r.mom), r.mom >= 0 ? 'pos' : 'neg'), td(F.num1(r.trend), r.trend >= 0 ? 'pos' : 'neg'), td(F.r2(r.sharpe3y)), td(F.num1(r.dd3y)));
+      return tr;
+    }));
+  });
+  dash.draw('persistchart', (el) => {
+    if (waiting(el, 'persistence')) return;
+    const p = prm(); const rows = ok('persistence').filter((r) => r.market === p.market && !n(r.rho));
+    const { svg, w, h, tip } = mkSvg(el, 300);
+    const ml = textW(svg, '-0.50') + 10;
+    const x = d3.scaleBand().domain(rows.map((r) => r.date)).range([ml, w - 6]).padding(0.2);
+    const y = d3.scaleLinear().domain([-1, 1]).range([h - 26, 8]);
+    svg.append('g').attr('transform', `translate(${ml},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(d3.format('.1f')).tickSize(-(w - ml - 6))).call(styleAxis).call((g) => g.select('.domain').remove());
+    const every = Math.ceil(rows.length / Math.max(2, Math.floor((w - ml) / 50)));
+    svg.append('g').attr('transform', `translate(0,${h - 26})`).call(d3.axisBottom(x).tickValues(rows.map((r) => r.date).filter((_, i) => i % every === 0)).tickFormat((d) => d.slice(0, 4))).call(styleAxis);
+    svg.append('line').attr('x1', ml).attr('x2', w - 6).attr('y1', y(0)).attr('y2', y(0)).style('stroke', 'var(--cds-chart-reference)');
+    for (const r of rows) {
+      svg.append('rect').attr('x', x(r.date)).attr('width', x.bandwidth()).attr('y', y(Math.max(0, r.rho))).attr('height', Math.abs(y(r.rho) - y(0))).attr('rx', 2)
+        .style('fill', r.rho >= 0 ? C()[0] : C()[7])
+        .on('pointerenter pointermove', (ev) => { tipLines(tip, `Ranked at ${fmtM(parseM(r.date))}`, [[null, 'Rank correlation', F.r2(r.rho)], [null, 'Past top-3 next 3y', F.pct(r.top3)], [null, 'Past bottom-3 next 3y', F.pct(r.bottom3)]]); const [px, py] = d3.pointer(ev, el); placeTip(el, tip, px, py); })
+        .on('pointerleave', () => { tip.hidden = true; });
+    }
+  });
+  const STRAT_ORDER = ['Top-3 Momentum Rotation', 'Min-Variance (walk-fwd)', 'All-Sector EW'];
+  const stratSeries = () => {
+    const s = ok('strategies'); if (!s) return null;
+    const p = prm(); const rows = s.filter((r) => r.market === p.market);
+    const by = d3.group(rows, (r) => r.strategy);
+    return Array.from(by.keys()).map((k) => {
+      const i = STRAT_ORDER.indexOf(k);
+      return { name: k, color: i >= 0 ? C()[i] : 'var(--color-fg)', dash: i >= 0 ? null : '5 4', width: i >= 0 ? 2 : 1.5, points: by.get(k).map((r) => ({ d: parseM(r.date), v: r.growth })) };
+    }).sort((a, b) => STRAT_ORDER.indexOf(b.name) - STRAT_ORDER.indexOf(a.name));
+  };
+  dash.draw('stratchart', (el) => {
+    if (waiting(el, 'strategies')) return;
+    const ser = stratSeries();
+    lineChart(el, { series: ser, log: true, height: 300, yfmt: (v) => (v >= 10 ? d3.format(',.0f')(v) : d3.format('.1f')(v)) + '×' });
+  });
+  dash.draw('stratlegend', (el) => {
+    const ser = stratSeries(); if (!ser) { el.replaceChildren(); return; }
+    el.replaceChildren(...[...ser].reverse().map((s) => { const sp = document.createElement('span'); const sw = document.createElement('span'); sw.style.cssText = `display:inline-block;width:14px;height:0;border-top:2px ${s.dash ? 'dashed' : 'solid'} ${s.color}`; sp.append(sw, document.createTextNode(s.name)); return sp; }));
+  });
+  dash.draw('stable', (el) => {
+    const s = ok('strat_metrics'); if (!s) { el.replaceChildren(); return; }
+    const p = prm(); const rows = s.filter((r) => r.market === p.market);
+    el.replaceChildren(...rows.map((r) => {
+      const tr = document.createElement('tr'); tr.dataset.key = r.key;
+      const vals = [r.strategy, r.start, F.num1(r.cagr), F.num1(r.vol), F.r2(r.sharpe), F.r2(r.sortino), F.num1(r.max_dd), F.r2(r.beta), F.num1(r.alpha)];
+      vals.forEach((v, i) => { const td = document.createElement('td'); td.textContent = v; if (i === 0) td.className = 'l'; tr.append(td); });
+      return tr;
+    }));
+  });
+
+  // ---------- NSE official ----------
+  const NSE_COLORS = () => C();
+  dash.draw('nsetable', (el) => {
+    const s = ok('nse'); if (!s) { el.replaceChildren(); return; }
+    const rows = [...s].sort((a, b) => (b.index.includes('benchmark') ? -1 : 0) - (a.index.includes('benchmark') ? -1 : 0) || b.sharpe - a.sharpe);
+    el.replaceChildren(...rows.map((r) => {
+      const tr = document.createElement('tr'); tr.dataset.key = r.key; if (r.index.includes('benchmark')) tr.className = 'bench';
+      const vals = [r.index, F.num1(r.cagr), F.num1(r.vol), F.r2(r.sharpe), F.num1(r.treynor), F.r2(r.beta), F.num1(r.max_dd), r.basket, F.num1(r.basket_cagr), n(r.gap) ? '—' : `${r.gap > 0 ? '+' : ''}${r.gap.toFixed(1)}`];
+      vals.forEach((v, i) => { const td = document.createElement('td'); td.textContent = v; if (i === 0 || i === 7) td.className = 'l'; tr.append(td); });
+      return tr;
+    }));
+  });
+  const nseSeries = () => {
+    const s = ok('nse_growth'); if (!s) return null;
+    const by = d3.group(s, (r) => r.index);
+    let i = 0;
+    return Array.from(by.keys()).map((k) => {
+      const isB = k.includes('benchmark');
+      // 10 indices > 8 colour slots: the top 7 by final value get colours, the rest are muted
+      return { name: k, isB, points: by.get(k).map((r) => ({ d: parseM(r.date), v: r.growth })) };
+    }).map((sr) => sr).sort((a, b) => b.points[b.points.length - 1].v - a.points[a.points.length - 1].v)
+      .map((sr) => { if (sr.isB) return { ...sr, color: 'var(--color-fg)', dash: '5 4', width: 1.5 }; const c = i < 7 ? NSE_COLORS()[i] : 'var(--cds-chart-muted)'; i++; return { ...sr, color: c }; });
+  };
+  dash.draw('nsechart', (el) => {
+    if (waiting(el, 'nse_growth')) return;
+    lineChart(el, { series: nseSeries(), log: true, height: 420, yfmt: (v) => d3.format('.1f')(v) + '×' });
+  });
+  dash.draw('nselegend', (el) => {
+    const ser = nseSeries(); if (!ser) { el.replaceChildren(); return; }
+    el.replaceChildren(...ser.map((s) => { const sp = document.createElement('span'); const sw = document.createElement('span'); sw.style.cssText = `display:inline-block;width:14px;height:0;border-top:2px ${s.dash ? 'dashed' : 'solid'} ${s.color}`; sp.append(sw, document.createTextNode(s.name)); return sp; }));
+  });
+
+  // ---------- constituents & flags ----------
+  dash.draw('sttable', (el) => {
+    const s = ok('stocks'); if (!s) { el.replaceChildren(); return; }
+    const p = prm(); const q = st.sq;
+    const rows = s.filter((r) => r.market === p.market && (!q || `${r.sector} ${r.ticker} ${r.name}`.toLowerCase().includes(q)));
+    el.replaceChildren(...rows.map((r) => {
+      const tr = document.createElement('tr'); tr.dataset.key = r.key;
+      const vals = [r.sector, r.ticker, r.name, F.txt(r.since), F.num1(r.cagr), F.num1(r.vol), F.num1(r.last1y)];
+      vals.forEach((v, i) => { const td = document.createElement('td'); td.textContent = v; if (i < 3) td.className = 'l'; tr.append(td); });
+      return tr;
+    }));
+  });
+  dash.draw('ftable', (el) => {
+    const s = ok('flags'); if (!s) { el.replaceChildren(); return; }
+    el.replaceChildren(...s.map((r) => {
+      const tr = document.createElement('tr'); tr.dataset.key = r.key;
+      [r.ticker, r.month, F.num1(r.raw_return)].forEach((v, i) => { const td = document.createElement('td'); td.textContent = v; if (i < 2) td.className = 'l'; tr.append(td); });
+      return tr;
+    }));
+  });
+
+  // open a linked place once drawn
+  if (hash) { const t = document.getElementById(hash); if (t && !t.classList.contains('js-page')) setTimeout(() => t.scrollIntoView(), 300); }
+})();
+</script>
+
+</body>
+</html>

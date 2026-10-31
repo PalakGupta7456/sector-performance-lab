@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sector Performance Lab — 36 years of US &amp; Indian sector returns</title>
+<meta name="description" content="Interactive analysis of sector returns, risk, Sharpe, Treynor, Sortino, alpha, drawdowns and momentum for US (1990–2026) and Indian (1997–2026) equity sectors.">
+<meta property="og:title" content="Sector Performance Lab">
+<meta property="og:description" content="Which sectors won over 36 years, at what risk, and does past performance predict the future? Interactive dashboard + open Python code.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23123a6b'/%3E%3Cpath d='M7 23l6-7 5 4 7-10' stroke='%2386b6ef' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+:root {
+  color-scheme: light;
+  --font-anthropic-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-anthropic-serif: "Fraunces", Georgia, serif;
+  --color-bg: #f6f5f1; --color-panel: #fdfdfb; --color-fg: #141413; --color-fg-muted: #5e5d59;
+  --color-border-line: #e3e1da; --color-ok: #0a7d0a; --color-warn: #b37800; --color-bad: #c63535;
+  --cds-font-size-caption: 12.5px; --cds-font-size-body: 15px; --cds-font-size-heading: 19px; --cds-font-size-title: 30px;
+  --cds-font-weight-medium: 600;
+  --cds-gap-xs: 4px; --cds-gap-sm: 8px; --cds-gap-md: 16px; --cds-gap-lg: 28px; --cds-gap-xl: 44px;
+  --cds-pad-xs: 4px; --cds-pad-sm: 8px; --cds-pad-md: 14px; --cds-pad-lg: 20px; --cds-radius: 10px;
+  --cds-chart-muted: #c9c7bf; --cds-chart-grid: #ecebe5; --cds-chart-axis: #b9b7ae; --cds-chart-reference: #8c8a82;
+  --cds-surface-popover: #ffffff; --cds-border: #dcdad2; --cds-shadow-popover: 0 6px 24px rgba(20,20,19,.12);
+  --cds-text-secondary: #5e5d59; --cds-dur-slow: 300ms; --cds-ease-out: cubic-bezier(.2,.7,.2,1);
+  --hero-a: #0f2f57; --hero-b: #1c5cab; --hero-c: #2a78d6;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #121211; --color-panel: #1c1c1a; --color-fg: #f0efec; --color-fg-muted: #a9a89f;
+  --color-border-line: #2f2f2c; --color-ok: #4cc24c; --color-warn: #f0b429; --color-bad: #ef6b6b;
+  --cds-chart-muted: #55544f; --cds-chart-grid: #262624; --cds-chart-axis: #4a4945; --cds-chart-reference: #8a8980;
+  --cds-surface-popover: #262624; --cds-border: #3a3a36; --cds-shadow-popover: 0 6px 24px rgba(0,0,0,.5);
+  --cds-text-secondary: #a9a89f; --hero-a: #0b1e38; --hero-b: #123a6b; --hero-c: #1c5cab;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); font-family: var(--font-anthropic-sans); -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+.hero { background: radial-gradient(1200px 400px at 85% -10%, var(--hero-c), transparent 60%), linear-gradient(135deg, var(--hero-a), var(--hero-b)); color: #fff; padding: 44px 16px 92px; }
+.hero-in { max-width: 1400px; margin: 0 auto; }
+.hero .kicker { text-transform: uppercase; letter-spacing: .14em; font-size: 12px; opacity: .8; font-weight: 600; }
+.hero h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: clamp(34px, 6vw, 58px); line-height: 1.05; margin: 10px 0 14px; letter-spacing: -.01em; }
+.hero p.sub { font-size: clamp(15px, 2vw, 18px); max-width: 62ch; line-height: 1.55; opacity: .92; margin: 0 0 22px; }
+.hero .links { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.hero .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; font-weight: 600; font-size: 14px; text-decoration: none; border: 1px solid rgba(255,255,255,.35); color: #fff; background: rgba(255,255,255,.08); backdrop-filter: blur(4px); cursor: pointer; font-family: inherit; }
+.hero .btn.primary { background: #fff; color: #0f2f57; border-color: #fff; }
+.hero .btn:hover { transform: translateY(-1px); }
+.hero .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 30px; max-width: 820px; }
+.hero .stat { border-left: 2px solid rgba(255,255,255,.4); padding-left: 12px; }
+.hero .stat b { display: block; font-family: var(--font-anthropic-serif); font-weight: 400; font-size: 30px; }
+.hero .stat span { font-size: 13px; opacity: .85; }
+main { max-width: 1400px; margin: -64px auto 0; padding: 0 16px 48px; position: relative; }
+#dash-root { background: var(--color-bg); border-radius: 16px; padding: clamp(16px, 3vw, 32px); box-shadow: 0 10px 40px rgba(0,0,0,.08); border: 1px solid var(--color-border-line); }
+#dash-root .sl > header > h1 { display: none; }
+footer { max-width: 1400px; margin: 0 auto; padding: 8px 16px 40px; color: var(--color-fg-muted); font-size: 13px; line-height: 1.6; }
+.dash-skeleton { position: relative; }
+.dash-skeleton::after { content: ""; position: absolute; inset: 8px 0; border-radius: 8px; background: linear-gradient(90deg, var(--cds-chart-grid), color-mix(in oklab, var(--cds-chart-grid) 40%, var(--color-panel)), var(--cds-chart-grid)); background-size: 200% 100%; animation: sh 1.4s infinite linear; }
+@keyframes sh { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .dash-skeleton::after { animation: none; } }
+</style>
+<script>
+  // theme: honour saved choice, else OS preference
+  (function () {
+    var t = null; try { t = localStorage.getItem('slab-theme'); } catch (e) {}
+    if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
+</head>
+<body>
+<section class="hero">
+  <div class="hero-in">
+    <div class="kicker">Equity research project · Python + D3</div>
+    <h1>Sector Performance Lab</h1>
+    <p class="sub">Which industries actually rewarded investors from 1990 to 2026 — and at what risk? A from-scratch study of 37 sector portfolios across the US and India: returns, volatility, Sharpe, Sortino, Treynor, alpha, drawdowns, correlations, and an honest test of whether past winners keep winning.</p>
+    <div class="links">
+      <a class="btn primary" href="https://github.com/{{GH_USER}}/{{REPO}}" target="_blank" rel="noopener">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        View the code on GitHub</a>
+      <a class="btn" href="https://github.com/{{GH_USER}}/{{REPO}}/tree/main/src" target="_blank" rel="noopener">Python pipeline</a>
+      <a class="btn" href="https://github.com/{{GH_USER}}/{{REPO}}/tree/main/outputs" target="_blank" rel="noopener">Result tables (CSV)</a>
+      <button class="btn" id="theme-toggle" type="button" aria-label="Toggle dark mode">◐ Theme</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>36 yrs</b><span>of monthly data, 1990–2026</span></div>
+      <div class="stat"><b>37</b><span>sector portfolios, US + India</span></div>
+      <div class="stat"><b>111</b><span>stocks &amp; funds analysed</span></div>
+      <div class="stat"><b>15+</b><span>performance &amp; risk metrics</span></div>
+    </div>
+  </div>
+</section>
+<main>
+  <div id="dash-root">
+<!--DASHBOARD-->
+  </div>
+</main>
+<footer>
+  Data: monthly prices from Yahoo Finance (pulled 1 Nov 2026; latest bar October 2026). US sectors use Fidelity Select sector funds (total return, USD); Indian sectors are equal-weight baskets of NSE stocks (price return, INR), cross-checked against official NSE indices. Historical analysis for education — not investment advice. Source code, data and methodology: <a href="https://github.com/{{GH_USER}}/{{REPO}}">github.com/{{GH_USER}}/{{REPO}}</a>.
+</footer>
+
+<script>
+// ---------------------------------------------------------------------------
+// Minimal runtime: loads the JSON datasets in /data and re-runs each chart
+// ("drawing") whenever data, filters, tab or width change.
+// ---------------------------------------------------------------------------
+window.dash = (function () {
+  const FILES = ['metrics','headlines','series','years','eras','corr','persistence','persist_sum','strategies','strat_metrics','outlook','nse','nse_growth','stocks','flags'];
+  const store = {}, status = {}, draws = new Map(), watchers = [];
+  const DEFAULTS = { market: 'US', win: 'Full' };
+  let params = Object.assign({}, DEFAULTS), queued = false;
+  const PAL = {
+    light: ['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300','#6250d6','#e34948'],
+    dark:  ['#3987e5','#d95926','#199e70','#c98500','#d55181','#008300','#9085e9','#e66767'],
+  };
+  const api = {
+    get colors() { return PAL[document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light']; },
+    data(id) {
+      if (!status[id]) load(id);
+      const s = status[id];
+      return { status: s === 'ok' ? 'ok' : s === 'error' ? 'error' : 'loading', data: store[id] || [], refreshing: false, meta: [] };
+    },
+    draw(name, fn) { if (fn) draws.set(name, fn); schedule(); },
+    onData(fn) { watchers.push(fn); schedule(); },
+    params() { return Object.assign({}, params); },
+    setParams(o) { Object.assign(params, o); schedule(); },
+    resetParams() { params = Object.assign({}, DEFAULTS); schedule(); },
+    setLink(name) { try { history.replaceState(null, '', '#' + name); } catch (e) {} schedule(); },
+    calc() {}, loader() {}, refresh() {},
+  };
+  function load(id) {
+    status[id] = 'loading';
+    fetch('data/' + id + '.json').then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then((j) => { store[id] = j.rows || j; status[id] = 'ok'; schedule(); })
+      .catch(() => { status[id] = 'error'; schedule(); });
+  }
+  function schedule() { if (queued) return; queued = true; requestAnimationFrame(run); }
+  function run() {
+    queued = false;
+    watchers.forEach((fn) => { try { fn(); } catch (e) { console.error(e); } });
+    draws.forEach((fn, name) => {
+      document.querySelectorAll('[data-draw="' + name + '"]').forEach((el) => {
+        if (el.closest('[hidden]')) return;
+        try { fn(el); } catch (e) { console.error(name, e); }
+      });
+    });
+  }
+  let lastW = 0;
+  new ResizeObserver(() => { const w = document.getElementById('dash-root').clientWidth; if (Math.abs(w - lastW) > 4) { lastW = w; schedule(); } }).observe(document.getElementById('dash-root'));
+  if (!FILES.length) schedule();
+  return api;
+})();
+document.getElementById('theme-toggle').addEventListener('click', () => {
+  const t = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  try { localStorage.setItem('slab-theme', t); } catch (e) {}
+  dash.setParams({});
+});
+</script>
+<!--DASHSCRIPT-->
+</body>
+</html>
